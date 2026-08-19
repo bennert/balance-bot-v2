@@ -4,7 +4,7 @@ LABEL maintainer="@hodlerhacks"
 
 WORKDIR /var/opt/balance-bot-v2
 COPY package*.json .
-RUN npm install
+RUN npm ci
 COPY . .
 
 EXPOSE 3000
