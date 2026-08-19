@@ -1,4 +1,4 @@
-FROM node:16.13.2-alpine3.15
+FROM node:24.19.0-alpine3.24
 
 LABEL maintainer="@hodlerhacks"
 
