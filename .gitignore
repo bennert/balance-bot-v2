@@ -8,3 +8,4 @@ workspace.*
 *test*
 *copy*
 node_modules
+.env
