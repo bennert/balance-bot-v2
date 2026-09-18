@@ -1,0 +1,3 @@
+# GitVersion 6 changed the default start version from 0.1.0 to 0.0.1.
+# Pinning it here keeps numbering consistent with what GitVersion 5 produced.
+next-version: 0.1.0
