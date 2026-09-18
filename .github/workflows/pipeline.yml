@@ -13,28 +13,28 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
         with:
             fetch-depth: 0
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY_IMAGE }}
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v4
         with:
             username: ${{ secrets.DOCKERHUB_USERNAME }}
             password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v4
       - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v0
+        uses: gittools/actions/gitversion/setup@v4
         with:
-            versionSpec: '5.x'
+            versionSpec: '6.x'
       - name: Run GitVersion
         id: gitversion
-        uses: gittools/actions/gitversion/execute@v0
+        uses: gittools/actions/gitversion/execute@v4
       - name: Display GitVersion variables
         run: |
           echo "Major: ${{ steps.gitversion.outputs.major }}"
@@ -46,12 +46,9 @@ jobs:
           echo "PreReleaseNumber: ${{ steps.gitversion.outputs.preReleaseNumber }}"
           echo "WeightedPreReleaseNumber: ${{ steps.gitversion.outputs.weightedPreReleaseNumber }}"
           echo "BuildMetaData: ${{ steps.gitversion.outputs.buildMetaData }}"
-          echo "BuildMetaDataPadded: ${{ steps.gitversion.outputs.buildMetaDataPadded }}"
           echo "FullBuildMetaData: ${{ steps.gitversion.outputs.fullBuildMetaData }}"
           echo "MajorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}"
           echo "SemVer: ${{ steps.gitversion.outputs.semVer }}"
-          echo "LegacySemVer: ${{ steps.gitversion.outputs.legacySemVer }}"
-          echo "LegacySemVerPadded: ${{ steps.gitversion.outputs.legacySemVerPadded }}"
           echo "AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
           echo "AssemblySemFileVer: ${{ steps.gitversion.outputs.assemblySemFileVer }}"
           echo "FullSemVer: ${{ steps.gitversion.outputs.fullSemVer }}"
@@ -60,21 +57,27 @@ jobs:
           echo "EscapedBranchName: ${{ steps.gitversion.outputs.escapedBranchName }}"
           echo "Sha: ${{ steps.gitversion.outputs.sha }}"
           echo "ShortSha: ${{ steps.gitversion.outputs.shortSha }}"
-          echo "NuGetVersionV2: ${{ steps.gitversion.outputs.nuGetVersionV2 }}"
-          echo "NuGetVersion: ${{ steps.gitversion.outputs.nuGetVersion }}"
-          echo "NuGetPreReleaseTagV2: ${{ steps.gitversion.outputs.nuGetPreReleaseTagV2 }}"
-          echo "NuGetPreReleaseTag: ${{ steps.gitversion.outputs.nuGetPreReleaseTag }}"
           echo "VersionSourceSha: ${{ steps.gitversion.outputs.versionSourceSha }}"
-          echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.commitsSinceVersionSource }}"
-          echo "CommitsSinceVersionSourcePadded: ${{ steps.gitversion.outputs.commitsSinceVersionSourcePadded }}"
+          echo "VersionSourceDistance: ${{ steps.gitversion.outputs.versionSourceDistance }}"
           echo "UncommittedChanges: ${{ steps.gitversion.outputs.uncommittedChanges }}"
           echo "CommitDate: ${{ steps.gitversion.outputs.commitDate }}"
+      - name: Compute image version tag
+        id: imagetag
+        env:
+          FULL_SEM_VER: ${{ steps.gitversion.outputs.fullSemVer }}
+        run: |
+          SAFE="${FULL_SEM_VER//+/-}"
+          echo "value=$SAFE" >> "$GITHUB_OUTPUT"
+          echo "Image version tag: version$SAFE"
+          if ! printf '%s' "version$SAFE" | grep -Eq '^[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}$'; then
+            echo "::error::Computed tag 'version$SAFE' is not a valid OCI tag"; exit 1
+          fi
       - name: Build and Push Docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
           platforms: ${{ env.PLATFORMS }}
           push: true
           labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ env.REGISTRY_IMAGE }}:latest,${{ env.REGISTRY_IMAGE }}:version${{ steps.gitversion.outputs.assemblySemVer }}.${{ steps.gitversion.outputs.buildMetaDataPadded }}
+          tags: ${{ env.REGISTRY_IMAGE }}:latest,${{ env.REGISTRY_IMAGE }}:version${{ steps.imagetag.outputs.value }}
