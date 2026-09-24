@@ -65,7 +65,9 @@ if (process.env.BB_RECV_WINDOW_PRELOAD === '1') {
 } else {
     // Launcher: re-exec bb.js with the patch preloaded for the whole process tree.
     const { spawn } = require('child_process');
-    const self = path.resolve(__dirname, 'bb-recvwindow.js');
+    // Node's NODE_OPTIONS parser treats backslashes inside quotes as escapes, so
+    // hand it a forward-slash path. Windows accepts those fine.
+    const self = path.resolve(__dirname, 'bb-recvwindow.js').replace(/\\/g, '/');
     const entry = path.resolve(__dirname, 'bb.js');
 
     const nodeOptions = [process.env.NODE_OPTIONS, `--require "${self}"`]
