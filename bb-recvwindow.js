@@ -13,6 +13,9 @@
 // Usage:  node bb-recvwindow.js            (default 20000 ms)
 //         BB_RECV_WINDOW=30000 node bb-recvwindow.js
 //
+// In Docker, where the image's CMD is fixed, set the preload directly instead:
+//         NODE_OPTIONS=--require /var/opt/balance-bot-v2/bb-recvwindow.js
+//
 // Plain `node bb.js` is unaffected.
 
 const path = require('path');
@@ -59,8 +62,9 @@ function patchCcxt() {
     }
 }
 
-if (process.env.BB_RECV_WINDOW_PRELOAD === '1') {
-    // Loaded through NODE_OPTIONS=--require in this process and every child.
+if (require.main !== module) {
+    // Loaded through NODE_OPTIONS=--require, either by the launcher below or by
+    // the user directly (handy in Docker, where the CMD cannot be changed).
     patchCcxt();
 } else {
     // Launcher: re-exec bb.js with the patch preloaded for the whole process tree.
@@ -79,7 +83,6 @@ if (process.env.BB_RECV_WINDOW_PRELOAD === '1') {
         env: {
             ...process.env,
             NODE_OPTIONS: nodeOptions,
-            BB_RECV_WINDOW_PRELOAD: '1',
             BB_RECV_WINDOW: String(RECV_WINDOW),
         },
     });
