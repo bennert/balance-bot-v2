@@ -29,5 +29,29 @@ node bb-recvwindow.js                  # 20000 ms
 BB_RECV_WINDOW=30000 node bb-recvwindow.js
 ```
 
-Plain `node bb.js` is unaffected. Note that Bybit also rejects timestamps more than ~1 s in the
-future, so the bot's `timeshift` setting cannot solve this.
+### Docker
+
+The image runs `CMD ["node", "bb.js"]`. Rather than overriding the command, preload the patch
+through an environment variable — this survives image updates and works with any orchestrator:
+
+```bash
+docker run -e "NODE_OPTIONS=--require /var/opt/balance-bot-v2/bb-recvwindow.js" \
+           -e BB_RECV_WINDOW=20000 ...
+```
+
+```yaml
+# docker-compose.yml
+services:
+  balance-bot:
+    environment:
+      - NODE_OPTIONS=--require /var/opt/balance-bot-v2/bb-recvwindow.js
+      - BB_RECV_WINDOW=20000
+```
+
+`/var/opt/balance-bot-v2` is the `WORKDIR` from the Dockerfile. Overriding the command
+(`command: node bb-recvwindow.js`) works too, but then you have to restate the entrypoint
+whenever upstream changes it. Look for `[recv-window] ccxt ...: recv_window set to 20000 ms` in
+the container log to confirm the patch loaded.
+
+Plain `node bb.js` without either variable is unaffected. Note that Bybit also rejects timestamps
+more than ~1 s in the future, so the bot's `timeshift` setting cannot solve this.
